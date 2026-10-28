@@ -1,0 +1,763 @@
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>My 家計簿 Pro</title>
+
+<style>
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 20px;
+  background: #f1f5f9;
+  color: #1e293b;
+  font-family: sans-serif;
+}
+
+.app {
+  max-width: 950px;
+  margin: auto;
+}
+
+h1 {
+  text-align: center;
+  color: #2563eb;
+}
+
+.card {
+  background: white;
+  padding: 22px;
+  margin-bottom: 18px;
+  border-radius: 15px;
+  box-shadow: 0 3px 12px #0000000d;
+}
+
+.summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.summary .card {
+  text-align: center;
+}
+
+.summary strong {
+  font-size: 24px;
+  overflow-wrap: anywhere;
+}
+
+.income {
+  color: #16a34a;
+}
+
+.expense {
+  color: #dc2626;
+}
+
+input, select, button {
+  width: 100%;
+  padding: 12px;
+  margin: 7px 0;
+  font-size: 16px;
+  border-radius: 8px;
+}
+
+input, select {
+  border: 1px solid #cbd5e1;
+  background: white;
+}
+
+button {
+  background: #2563eb;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+
+button:hover {
+  opacity: 0.85;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 3px solid #93c5fd;
+}
+
+.secondary {
+  background: #64748b;
+}
+
+.delete {
+  background: #dc2626;
+}
+
+.edit {
+  background: #0d9488;
+}
+
+.hidden {
+  display: none;
+}
+
+.row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.row > * {
+  min-width: 0;
+  flex: 1;
+}
+
+.record {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.record-info {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.record-info small {
+  color: #64748b;
+}
+
+.record-actions {
+  display: flex;
+  gap: 5px;
+}
+
+.record-actions button {
+  width: auto;
+  padding: 8px 12px;
+}
+
+.chart-box {
+  max-width: 300px;
+  margin: 20px auto;
+}
+
+#pieChart {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: #e2e8f0;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+}
+
+.dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.muted {
+  color: #64748b;
+}
+
+@media (max-width: 600px) {
+  body {
+    padding: 10px;
+  }
+
+  .card {
+    padding: 15px;
+  }
+
+  .summary {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .summary .card {
+    margin-bottom: 10px;
+  }
+
+  .row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+  }
+
+  .record {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .record-actions {
+    width: 100%;
+  }
+
+  .record-actions button {
+    flex: 1;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<main class="app">
+
+<h1>💰 My 家計簿 Pro</h1>
+
+<!-- 月の切り替え -->
+<section class="card">
+  <h2>📅 月を選択</h2>
+  <input type="month" id="month">
+</section>
+
+<!-- 月間集計 -->
+<div class="summary">
+
+  <section class="card">
+    <p>今月の収入</p>
+    <strong class="income" id="income">0円</strong>
+  </section>
+
+  <section class="card">
+    <p>今月の支出</p>
+    <strong class="expense" id="expense">0円</strong>
+  </section>
+
+  <section class="card">
+    <p>今月の収支</p>
+    <strong id="balance">0円</strong>
+  </section>
+
+</div>
+
+<!-- 入力フォーム -->
+<section class="card">
+
+<h2 id="formTitle">✏️ 新しく記録する</h2>
+
+<form id="recordForm">
+
+<label for="date">日付</label>
+<input type="date" id="date" required>
+
+<label for="name">内容</label>
+<input
+  id="name"
+  type="text"
+  maxlength="100"
+  placeholder="例：お昼ごはん"
+  required
+>
+
+<label for="amount">金額（円）</label>
+<input
+  id="amount"
+  type="number"
+  min="1"
+  max="999999999999"
+  step="1"
+  placeholder="例：500"
+  required
+>
+
+<label for="type">種類</label>
+<select id="type">
+  <option value="expense">支出</option>
+  <option value="income">収入</option>
+</select>
+
+<label for="category">カテゴリー</label>
+<select id="category"></select>
+
+<button type="submit" id="saveButton">
+  記録する
+</button>
+
+<button
+  type="button"
+  class="secondary hidden"
+  id="cancelButton"
+>
+  編集をキャンセル
+</button>
+
+</form>
+</section>
+
+<!-- 円グラフ -->
+<section class="card">
+
+<h2>📊 カテゴリー別の支出</h2>
+
+<div class="chart-box">
+  <div
+    id="pieChart"
+    role="img"
+    aria-label="カテゴリー別支出の円グラフ"
+  ></div>
+</div>
+
+<div id="legend" class="legend"></div>
+
+<p id="noChart" class="muted"></p>
+
+</section>
+
+<!-- 履歴 -->
+<section class="card">
+
+<h2>📋 記録一覧</h2>
+
+<p class="muted">
+  選択した月の記録が表示されます。
+</p>
+
+<div id="history"></div>
+
+</section>
+
+</main>
+
+<script>
+
+// -----------------------
+// 1. 基本設定
+// -----------------------
+
+const STORAGE_KEY = "my-kakeibo-pro-v1";
+
+const expenseCategories = [
+  "食費",
+  "交通費",
+  "日用品",
+  "娯楽",
+  "勉強",
+  "衣服",
+  "その他"
+];
+
+const incomeCategories = [
+  "おこづかい",
+  "給料",
+  "臨時収入",
+  "その他"
+];
+
+const colors = [
+  "#2563eb",
+  "#f97316",
+  "#16a34a",
+  "#a855f7",
+  "#ec4899",
+  "#eab308",
+  "#64748b"
+];
+
+let records = loadRecords();
+let editingId = null;
+
+const $ = id => document.getElementById(id);
+
+function loadRecords() {
+  try {
+    const data = JSON.parse(
+      localStorage.getItem(STORAGE_KEY) || "[]"
+    );
+
+    return Array.isArray(data) ? data : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveRecords() {
+  try {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify(records)
+    );
+    return true;
+  } catch {
+    alert("保存できませんでした。ブラウザの保存設定や空き容量を確認してください。");
+    return false;
+  }
+}
+
+function yen(number) {
+  return number.toLocaleString("ja-JP") + "円";
+}
+
+function today() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+
+  return `${y}-${m}-${day}`;
+}
+
+// 初期の日付を設定
+$("date").value = today();
+$("month").value = today().slice(0, 7);
+
+// -----------------------
+// 2. カテゴリーの切り替え
+// -----------------------
+
+function updateCategories(selected = null) {
+  const type = $("type").value;
+
+  const categories = type === "income"
+    ? incomeCategories
+    : expenseCategories;
+
+  $("category").replaceChildren();
+
+  categories.forEach(category => {
+    const option = document.createElement("option");
+    option.value = category;
+    option.textContent = category;
+    $("category").appendChild(option);
+  });
+
+  if (selected && categories.includes(selected)) {
+    $("category").value = selected;
+  }
+}
+
+$("type").addEventListener("change", () => {
+  updateCategories();
+});
+
+updateCategories();
+
+// -----------------------
+// 3. 記録の追加・更新
+// -----------------------
+
+$("recordForm").addEventListener("submit", event => {
+  event.preventDefault();
+
+  const date = $("date").value;
+  const name = $("name").value.trim();
+  const amount = Number($("amount").value);
+  const type = $("type").value;
+  const category = $("category").value;
+
+  if (
+    !date ||
+    !name ||
+    !Number.isSafeInteger(amount) ||
+    amount <= 0 ||
+    amount > 999999999999
+  ) {
+    alert("入力内容を確認してください。");
+    return;
+  }
+
+  const record = {
+    id: editingId || crypto.randomUUID(),
+    date,
+    name,
+    amount,
+    type,
+    category
+  };
+
+  const previous = records;
+
+  if (editingId) {
+    records = records.map(item =>
+      item.id === editingId ? record : item
+    );
+  } else {
+    records = [...records, record];
+  }
+
+  if (!saveRecords()) {
+    records = previous;
+    return;
+  }
+
+  // 記録した月を表示する
+  $("month").value = date.slice(0, 7);
+
+  resetForm();
+  update();
+});
+
+// -----------------------
+// 4. 編集機能
+// -----------------------
+
+function editRecord(id) {
+  const record = records.find(item => item.id === id);
+
+  if (!record) return;
+
+  editingId = id;
+
+  $("date").value = record.date;
+  $("name").value = record.name;
+  $("amount").value = record.amount;
+  $("type").value = record.type;
+
+  updateCategories(record.category);
+
+  $("formTitle").textContent = "📝 記録を編集する";
+  $("saveButton").textContent = "変更を保存";
+  $("cancelButton").classList.remove("hidden");
+
+  $("recordForm").scrollIntoView({
+    behavior: "smooth",
+    block: "center"
+  });
+}
+
+function resetForm() {
+  editingId = null;
+
+  $("recordForm").reset();
+  $("date").value = today();
+
+  updateCategories();
+
+  $("formTitle").textContent = "✏️ 新しく記録する";
+  $("saveButton").textContent = "記録する";
+  $("cancelButton").classList.add("hidden");
+}
+
+$("cancelButton").addEventListener("click", resetForm);
+
+// -----------------------
+// 5. 削除機能
+// -----------------------
+
+function deleteRecord(id) {
+  if (!confirm("この記録を削除しますか？")) {
+    return;
+  }
+
+  const previous = records;
+  records = records.filter(item => item.id !== id);
+
+  if (!saveRecords()) {
+    records = previous;
+    return;
+  }
+
+  if (editingId === id) resetForm();
+
+  update();
+}
+
+// -----------------------
+// 6. 月ごとの集計
+// -----------------------
+
+function update() {
+  const selectedMonth = $("month").value;
+
+  const monthly = records.filter(record =>
+    record.date.startsWith(selectedMonth)
+  );
+
+  let income = 0;
+  let expense = 0;
+
+  monthly.forEach(record => {
+    if (record.type === "income") {
+      income += record.amount;
+    } else {
+      expense += record.amount;
+    }
+  });
+
+  $("income").textContent = yen(income);
+  $("expense").textContent = yen(expense);
+  $("balance").textContent = yen(income - expense);
+
+  renderHistory(monthly);
+  renderChart(monthly);
+}
+
+// -----------------------
+// 7. 履歴の表示
+// -----------------------
+
+function renderHistory(monthly) {
+  const history = $("history");
+
+  history.replaceChildren();
+
+  const sorted = [...monthly].sort((a, b) =>
+    b.date.localeCompare(a.date)
+  );
+
+  if (sorted.length === 0) {
+    const p = document.createElement("p");
+    p.textContent = "この月の記録はありません。";
+    p.className = "muted";
+    history.appendChild(p);
+    return;
+  }
+
+  sorted.forEach(record => {
+    const div = document.createElement("div");
+    div.className = "record";
+
+    const info = document.createElement("div");
+    info.className = "record-info";
+
+    const title = document.createElement("strong");
+    title.textContent = record.name;
+
+    const detail = document.createElement("small");
+    detail.textContent =
+      `${record.date} / ${record.category}`;
+
+    const amount = document.createElement("p");
+    amount.className =
+      record.type === "income" ? "income" : "expense";
+
+    amount.textContent =
+      (record.type === "income" ? "+" : "-") +
+      yen(record.amount);
+
+    info.append(title, document.createElement("br"), detail, amount);
+
+    const actions = document.createElement("div");
+    actions.className = "record-actions";
+
+    const editButton = document.createElement("button");
+    editButton.className = "edit";
+    editButton.textContent = "編集";
+    editButton.onclick = () => editRecord(record.id);
+
+    const deleteButton = document.createElement("button");
+    deleteButton.className = "delete";
+    deleteButton.textContent = "削除";
+    deleteButton.onclick = () => deleteRecord(record.id);
+
+    actions.append(editButton, deleteButton);
+    div.append(info, actions);
+    history.appendChild(div);
+  });
+}
+
+// -----------------------
+// 8. 円グラフ
+// -----------------------
+
+function renderChart(monthly) {
+  const totals = {};
+
+  monthly.forEach(record => {
+    if (record.type !== "expense") return;
+
+    totals[record.category] =
+      (totals[record.category] || 0) + record.amount;
+  });
+
+  const entries = Object.entries(totals)
+    .filter(([, amount]) => amount > 0)
+    .sort((a, b) => b[1] - a[1]);
+
+  const total = entries.reduce(
+    (sum, [, amount]) => sum + amount,
+    0
+  );
+
+  const chart = $("pieChart");
+  const legend = $("legend");
+
+  legend.replaceChildren();
+
+  if (total === 0) {
+    chart.style.background = "#e2e8f0";
+    chart.setAttribute("aria-label", "支出データなし");
+    $("noChart").textContent =
+      "支出を登録すると円グラフが表示されます。";
+    return;
+  }
+
+  $("noChart").textContent = "";
+
+  let current = 0;
+  const segments = [];
+
+  entries.forEach(([category, amount], index) => {
+    const percent = amount / total * 100;
+    const start = current;
+    current += percent;
+
+    const color = colors[index % colors.length];
+
+    segments.push(
+      `${color} ${start}% ${current}%`
+    );
+
+    const item = document.createElement("div");
+    item.className = "legend-item";
+
+    const dot = document.createElement("span");
+    dot.className = "dot";
+    dot.style.background = color;
+
+    const label = document.createElement("span");
+    label.textContent =
+      `${category}：${yen(amount)} (${percent.toFixed(1)}%)`;
+
+    item.append(dot, label);
+    legend.appendChild(item);
+  });
+
+  // CSSのconic-gradientで円グラフを作成
+  chart.style.background =
+    `conic-gradient(${segments.join(", ")})`;
+
+  chart.setAttribute(
+    "aria-label",
+    entries.map(([category, amount]) =>
+      `${category} ${yen(amount)}`
+    ).join("、")
+  );
+}
+
+// -----------------------
+// 9. 月の変更
+// -----------------------
+
+$("month").addEventListener("change", update);
+
+// 初回表示
+update();
+
+</script>
+
+</body>
+</html>
